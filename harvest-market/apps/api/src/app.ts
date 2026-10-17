@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { openDb } from './db.js';
 import { allocation } from './domain.js';
 import { getOpenPaymentsConfig, inspectConfiguredWallets } from './openPayments.js';
+import { initiateFunding, completeFunding, initiatePurchase, completePurchase, checkPaymentStatus, getPaymentState, getSplitState } from './openPaymentsProvider.js';
 
 type User={id:string;name:string;email:string;role:string};
 type Project={id:string;farmer_id:string;investor_id:string|null;principal:number;quantity:number;sold:number;revenue:number;share_bps:number;unit_price:number;currency:string;status:string;[key:string]:unknown};
@@ -14,6 +15,7 @@ export function createApp(db=openDb()) {
  const app=express(); app.disable('x-powered-by');app.use(express.json({limit:'8mb'}));
  app.use((req,res,next)=>{res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');if(req.method!=='GET' && req.headers.origin && ![process.env.WEB_ORIGIN||'http://localhost:3000','http://127.0.0.1:3000'].includes(req.headers.origin))return res.status(403).json({error:'Origin not allowed'});next();});
  app.get('/api/health',(_req,res)=>res.json({ok:true,paymentMode:process.env.PAYMENT_MODE||'simulation'}));
+ app.get('/api/payment-status/:paymentId',(_req,res)=>{const s=checkPaymentStatus(String(_req.params.paymentId));if(!s)return res.status(404).json({error:'Payment not found'});res.json(s);});
  app.get('/api/open-payments/status',(_req,res)=>{
   const config=getOpenPaymentsConfig();
   res.json({environment:config.environment,paymentMode:process.env.PAYMENT_MODE||'simulation',credentialsConfigured:Boolean(config.clientWalletAddress&&config.keyId&&config.privateKeyPath),walletsConfigured:Object.keys(config.wallets),liveTransfersEnabled:false});
@@ -130,7 +132,7 @@ export function createApp(db=openDb()) {
   }catch(error){db.exec('ROLLBACK');throw error;}
   res.status(201).json({id});
  });
- app.post('/api/projects/:id/:action',(req,res)=>{
+ app.post('/api/projects/:id/:action',async(req,res)=>{
   const user=res.locals.user as User; const key=req.headers['idempotency-key'];if(typeof key!=='string'||key.length<8||key.length>100)return res.status(400).json({error:'A unique Idempotency-Key is required'});
   const fingerprint=JSON.stringify([req.params.id,req.params.action,req.body]);db.exec('BEGIN IMMEDIATE');
   try {
@@ -142,8 +144,27 @@ export function createApp(db=openDb()) {
     if(user.role!=='investor'||p.status!=='FUNDING')throw new Error('Only an investor can fund an unfunded project');
     if(req.body.acceptTerms!==true)throw new Error('Accept the investment agreement first');
     const existing=db.prepare('SELECT id FROM projects WHERE farmer_id=? AND investor_id IS NOT NULL AND investor_id<>? LIMIT 1').get(p.farmer_id,user.id);if(existing)throw new Error('This farmer already has a different investor');
-    db.prepare('INSERT INTO agreements(project_id,investor_id,principal,share_bps,quantity,currency) VALUES(?,?,?,?,?,?)').run(p.id,user.id,p.principal,p.share_bps,p.quantity,p.currency);
-    db.prepare("UPDATE projects SET investor_id=?,status='GROWING' WHERE id=?").run(user.id,p.id);db.prepare("UPDATE project_phases SET status='FUNDED' WHERE project_id=? AND status='PROPOSED'").run(p.id);pay(p,'FUNDING',p.principal,'escrow:'+p.id,'investor:'+user.id);
+    const paymentMode=process.env.PAYMENT_MODE||'simulation';
+    if(paymentMode==='open-payments'){
+     // Open Payments real flow: initiate payment, return redirect URL for investor consent
+     const config=getOpenPaymentsConfig();
+     const callbackUrl=process.env.OPEN_PAYMENTS_CALLBACK_URL||'http://localhost:3000/payment-callback';
+     const funding=await initiateFunding({projectId:p.id,investorId:user.id,growerId:p.farmer_id,amount:p.principal,currency:p.currency as 'USD'|'EUR'|'COP',callbackUrl});
+     // Store pending funding in DB so we can complete it on callback
+     db.prepare('INSERT INTO agreements(project_id,investor_id,principal,share_bps,quantity,currency) VALUES(?,?,?,?,?,?)').run(p.id,user.id,p.principal,p.share_bps,p.quantity,p.currency);
+     // Create a pending payment record
+     const paymentId=randomUUID();
+     db.prepare("INSERT INTO payments(id,project_id,kind,amount,currency,status,provider) VALUES(?,?,'FUNDING',?,?, 'PENDING_CONSENT','open-payments')").run(paymentId,p.id,p.principal,p.currency);
+     db.prepare('INSERT INTO journal(payment_id,account,amount,currency) VALUES(?,?,?,?)').run(paymentId,'escrow:'+p.id,p.principal,p.currency);
+     db.prepare('INSERT INTO journal(payment_id,account,amount,currency) VALUES(?,?,?,?)').run(paymentId,'investor:'+user.id,-p.principal,p.currency);
+     // Store mapping paymentId -> open payments state (in memory via provider)
+     // Don't change project status yet — wait for payment confirmation
+     result={ok:true,paymentId:funding.paymentId,redirectUrl:funding.redirectUrl,interactFinish:funding.interactFinish,status:'PENDING_CONSENT',message:'Investor must approve the payment in their wallet.'};
+    }else{
+     // Simulation flow (original)
+     db.prepare('INSERT INTO agreements(project_id,investor_id,principal,share_bps,quantity,currency) VALUES(?,?,?,?,?,?)').run(p.id,user.id,p.principal,p.share_bps,p.quantity,p.currency);
+     db.prepare("UPDATE projects SET investor_id=?,status='GROWING' WHERE id=?").run(user.id,p.id);db.prepare("UPDATE project_phases SET status='FUNDED' WHERE project_id=? AND status='PROPOSED'").run(p.id);pay(p,'FUNDING',p.principal,'escrow:'+p.id,'investor:'+user.id);
+    }
    }else if(action==='phase-release'){
     if(user.id!==p.farmer_id||p.status!=='GROWING')throw new Error('Solo el cultivador puede confirmar desembolsos de una cosecha financiada');
     const phaseNumber=z.number().int().min(1).max(3).parse(req.body.phase_number);
@@ -160,12 +181,94 @@ export function createApp(db=openDb()) {
     if(user.id!==p.farmer_id)throw new Error('Only the farmer can post updates');if(p.status==='GROWING')throw new Error('Registra el avance desde la fase correspondiente; cada fase admite una sola descripción y evidencia de cierre.');const body=z.string().min(3).max(2000).parse(req.body.body);db.prepare('INSERT INTO updates(id,project_id,body) VALUES(?,?,?)').run(randomUUID(),p.id,body);
    }else if(action==='buy'){
     if(user.role!=='buyer'||p.status!=='SELLING')throw new Error('Only buyers can purchase an available harvest');const qty=z.number().int().positive().parse(req.body.quantity);if(qty>p.quantity-p.sold)throw new Error('Not enough inventory');const value=qty*p.unit_price;
-    db.prepare('INSERT INTO orders(id,project_id,buyer_id,quantity,amount,currency) VALUES(?,?,?,?,?,?)').run(randomUUID(),p.id,user.id,qty,value,p.currency);pay(p,'SALE',value,'proceeds:'+p.id,'buyer:'+user.id);
-    db.prepare('UPDATE projects SET sold=sold+?,revenue=revenue+?,status=? WHERE id=?').run(qty,value,qty+p.sold===p.quantity?'SOLD_OUT':'SELLING',p.id);
-    if(qty+p.sold===p.quantity){const split=allocation(p.principal,p.revenue+value,p.share_bps,300);pay(p,'INVESTOR_RETURN',split.investor,'investor:'+p.investor_id,'proceeds:'+p.id);pay(p,'FARMER_PROFIT',split.farmer,'farmer:'+p.farmer_id,'proceeds:'+p.id);pay(p,'DAPP_COMMISSION',split.commission,'dapp:treasury','proceeds:'+p.id);db.prepare("UPDATE projects SET status='DISTRIBUTED' WHERE id=?").run(p.id);result={ok:true,distribution:split};}
+    const paymentMode=process.env.PAYMENT_MODE||'simulation';
+    if(paymentMode==='open-payments'&&qty+p.sold===p.quantity){
+     // Full-lot purchase with Open Payments split — grower + platform + investor
+     const split=allocation(p.principal,p.revenue+value,p.share_bps,300);
+     const callbackUrl=process.env.OPEN_PAYMENTS_CALLBACK_URL||'http://localhost:3000/payment-callback';
+     const purchase=await initiatePurchase({projectId:p.id,buyerId:user.id,investorId:p.investor_id,growerId:p.farmer_id,investorAmount:split.investor,growerAmount:split.farmer,platformAmount:split.commission,callbackUrl});
+     // Record the order and update inventory in the same transaction
+     db.prepare('INSERT INTO orders(id,project_id,buyer_id,quantity,amount,currency) VALUES(?,?,?,?,?,?)').run(randomUUID(),p.id,user.id,qty,value,p.currency);
+     db.prepare('UPDATE projects SET sold=sold+?,revenue=revenue+?,status=? WHERE id=?').run(qty,value,'SOLD_OUT',p.id);
+     // Create pending payment records for each split
+     const fundPaymentId=randomUUID();
+     db.prepare("INSERT INTO payments(id,project_id,kind,amount,currency,status,provider) VALUES(?,?,'SALE',?,?, 'PENDING_CONSENT','open-payments')").run(fundPaymentId,p.id,value,p.currency);
+     result={ok:true,paymentId:purchase.paymentId,redirectUrl:purchase.redirectUrl,interactFinish:purchase.interactFinish,status:'PENDING_CONSENT',distribution:split,message:'Buyer must approve the split payment in their wallet.'};
+    }else{
+     // Simulation flow (original) — partial purchases or simulation mode
+     db.prepare('INSERT INTO orders(id,project_id,buyer_id,quantity,amount,currency) VALUES(?,?,?,?,?,?)').run(randomUUID(),p.id,user.id,qty,value,p.currency);pay(p,'SALE',value,'proceeds:'+p.id,'buyer:'+user.id);
+     db.prepare('UPDATE projects SET sold=sold+?,revenue=revenue+?,status=? WHERE id=?').run(qty,value,qty+p.sold===p.quantity?'SOLD_OUT':'SELLING',p.id);
+     if(qty+p.sold===p.quantity){const split=allocation(p.principal,p.revenue+value,p.share_bps,300);pay(p,'INVESTOR_RETURN',split.investor,'investor:'+p.investor_id,'proceeds:'+p.id);pay(p,'FARMER_PROFIT',split.farmer,'farmer:'+p.farmer_id,'proceeds:'+p.id);pay(p,'DAPP_COMMISSION',split.commission,'dapp:treasury','proceeds:'+p.id);db.prepare("UPDATE projects SET status='DISTRIBUTED' WHERE id=?").run(p.id);result={ok:true,distribution:split};}
+    }
    }else throw new Error('Unknown action');
    db.prepare('INSERT INTO requests VALUES(?,?,?,?)').run(user.id,key,fingerprint,JSON.stringify(result));db.exec('COMMIT');res.json(result);
   }catch(error){db.exec('ROLLBACK');res.status(400).json({error:error instanceof Error?error.message:'Operation failed'});}
+ });
+ // Payment callback endpoint — frontend calls this after user is redirected back from wallet
+ app.get('/api/payment-callback',async(req,res)=>{
+  const interactRef=typeof req.query.interact_ref==='string'?req.query.interact_ref:'';
+  const paymentId=typeof req.query.payment_id==='string'?req.query.payment_id:'';
+  if(!interactRef){return res.status(400).json({error:'Missing interact_ref parameter'});}
+  if(!paymentId){return res.status(400).json({error:'Missing payment_id parameter'});}
+  // Try funding state first
+  const fundState=getPaymentState(paymentId);
+  if(fundState){
+   if(fundState.status==='COMPLETED'){return res.json({ok:true,paymentId,message:'Payment already completed'});}
+   try{
+    const result=await completeFunding(paymentId,interactRef);
+    db.exec('BEGIN IMMEDIATE');
+    try{
+     db.prepare("UPDATE projects SET investor_id=?,status='GROWING' WHERE id=? AND status='FUNDING'").run(fundState.investorId,fundState.projectId);
+     db.prepare("UPDATE project_phases SET status='FUNDED' WHERE project_id=? AND status='PROPOSED'").run(fundState.projectId);
+     db.prepare("UPDATE payments SET status='CONFIRMED' WHERE project_id=? AND kind='FUNDING' AND provider='open-payments'").run(fundState.projectId);
+     db.exec('COMMIT');
+    }catch(dbError){db.exec('ROLLBACK');throw dbError;}
+    res.json({ok:true,paymentId,type:'funding',outgoingPaymentId:result.outgoingPaymentId,sentAmount:result.sentAmount});
+   }catch(error){
+    console.error('Funding callback error:',error);
+    try{db.prepare("UPDATE payments SET status='FAILED' WHERE project_id=? AND kind='FUNDING' AND provider='open-payments'").run(fundState.projectId);}catch{}
+    res.status(400).json({error:error instanceof Error?error.message:'Payment failed'});
+   }
+   return;
+  }
+  // Try split purchase state
+  const splitState=getSplitState(paymentId);
+  if(splitState){
+   if(splitState.status==='COMPLETED'){return res.json({ok:true,paymentId,message:'Split payment already completed'});}
+   try{
+    const result=await completePurchase(paymentId,interactRef);
+    db.exec('BEGIN IMMEDIATE');
+    try{
+     // Update payment records and project status to DISTRIBUTED
+     db.prepare("UPDATE payments SET status='CONFIRMED' WHERE project_id=? AND kind='SALE' AND provider='open-payments'").run(splitState.projectId);
+     db.prepare("UPDATE projects SET status='DISTRIBUTED' WHERE id=?").run(splitState.projectId);
+     // Record journal entries for each split
+     const p=db.prepare('SELECT * FROM projects WHERE id=?').get(splitState.projectId) as Project;
+     if(splitState.investorAmount>0&&p.investor_id){
+      const invPayId=randomUUID();
+      db.prepare("INSERT INTO payments(id,project_id,kind,amount,currency,status,provider) VALUES(?,?,'INVESTOR_RETURN',?,?, 'CONFIRMED','open-payments')").run(invPayId,splitState.projectId,splitState.investorAmount,p.currency);
+      db.prepare('INSERT INTO journal(payment_id,account,amount,currency) VALUES(?,?,?,?)').run(invPayId,'investor:'+p.investor_id,splitState.investorAmount,p.currency);
+      db.prepare('INSERT INTO journal(payment_id,account,amount,currency) VALUES(?,?,?,?)').run(invPayId,'proceeds:'+splitState.projectId,-splitState.investorAmount,p.currency);
+     }
+     const grwPayId=randomUUID();
+     db.prepare("INSERT INTO payments(id,project_id,kind,amount,currency,status,provider) VALUES(?,?,'FARMER_PROFIT',?,?, 'CONFIRMED','open-payments')").run(grwPayId,splitState.projectId,splitState.growerAmount,p.currency);
+     db.prepare('INSERT INTO journal(payment_id,account,amount,currency) VALUES(?,?,?,?)').run(grwPayId,'farmer:'+p.farmer_id,splitState.growerAmount,p.currency);
+     db.prepare('INSERT INTO journal(payment_id,account,amount,currency) VALUES(?,?,?,?)').run(grwPayId,'proceeds:'+splitState.projectId,-splitState.growerAmount,p.currency);
+     const platPayId=randomUUID();
+     db.prepare("INSERT INTO payments(id,project_id,kind,amount,currency,status,provider) VALUES(?,?,'DAPP_COMMISSION',?,?, 'CONFIRMED','open-payments')").run(platPayId,splitState.projectId,splitState.platformAmount,p.currency);
+     db.prepare('INSERT INTO journal(payment_id,account,amount,currency) VALUES(?,?,?,?)').run(platPayId,'dapp:treasury',splitState.platformAmount,p.currency);
+     db.prepare('INSERT INTO journal(payment_id,account,amount,currency) VALUES(?,?,?,?)').run(platPayId,'proceeds:'+splitState.projectId,-splitState.platformAmount,p.currency);
+     db.exec('COMMIT');
+    }catch(dbError){db.exec('ROLLBACK');throw dbError;}
+    res.json({ok:true,paymentId,type:'purchase',payments:result.payments});
+   }catch(error){
+    console.error('Purchase callback error:',error);
+    try{db.prepare("UPDATE payments SET status='FAILED' WHERE project_id=? AND kind='SALE' AND provider='open-payments'").run(splitState.projectId);}catch{}
+    res.status(400).json({error:error instanceof Error?error.message:'Split payment failed'});
+   }
+   return;
+  }
+  res.status(404).json({error:'Payment state not found — it may have expired'});
  });
  app.use((error:unknown,_req:express.Request,res:express.Response,_next:express.NextFunction)=>{if(error instanceof z.ZodError)return res.status(400).json({error:error.issues.map(x=>x.message).join('; ')});console.error(error);res.status(500).json({error:'Unexpected server error'});});
  return app;
