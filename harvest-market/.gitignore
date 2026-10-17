@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.next/
+*.sqlite*
+.env*
+!.env.example
+*.tsbuildinfo
+apps/api/secrets/
+apps/api/private.key

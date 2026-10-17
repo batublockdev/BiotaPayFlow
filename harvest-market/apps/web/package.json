@@ -1,0 +1,1 @@
+{"name":"@harvest/web","private":true,"scripts":{"dev":"next dev","build":"next build","start":"next start","typecheck":"tsc --noEmit"},"dependencies":{"next":"16.4.2","react":"^19.2.0","react-dom":"^19.2.0","lucide-react":"^0.468.0"},"devDependencies":{"@types/react":"^19.2.0","@types/react-dom":"^19.2.0"}}

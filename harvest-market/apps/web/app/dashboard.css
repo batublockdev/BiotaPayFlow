@@ -1,0 +1,128 @@
+.grower-dashboard{margin:0 0 34px;border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}
+.grower-welcome{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:26px 30px;background:linear-gradient(115deg,#eef2e6,#fbfcf8)}
+.grower-welcome h2{font:600 23px Manrope,Arial,sans-serif;letter-spacing:-.7px;margin:8px 0}
+.grower-welcome p{font-size:12px;color:var(--muted);margin:0;max-width:540px}
+.grower-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:20px 10px}
+.grower-stats>div{padding:4px 20px;border-right:1px solid var(--line)}
+.grower-stats>div:last-child{border:0}
+.grower-stats span{display:block;color:var(--muted);font-size:10px;margin-bottom:8px}
+.grower-stats strong{font:600 24px Manrope,Arial,sans-serif;letter-spacing:-.8px}
+.buyer-pipeline{margin:0 0 28px;padding:22px 24px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.buyer-pipeline h2{margin:7px 0;font:600 19px Manrope,Arial,sans-serif}
+.buyer-pipeline p{margin:0;color:var(--muted);font-size:11px}
+.buyer-pipeline-list{display:grid;gap:8px;margin-top:16px}
+.buyer-pipeline-item{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:13px 15px;border:1px solid var(--line);border-radius:8px;background:#fbfcf8;color:var(--ink);text-align:left}
+.buyer-pipeline-item>span:first-child{display:grid;gap:4px}
+.buyer-pipeline-item strong{font-size:12px}
+.buyer-pipeline-item small{font-size:10px;color:var(--muted)}
+.buyer-pipeline-status{padding:6px 9px;border-radius:20px;background:#f1f2e8;color:#687547;font-size:10px;white-space:nowrap}
+@media(max-width:760px){.grower-welcome{align-items:flex-start;flex-direction:column;padding:22px}.grower-stats{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:18px}.grower-stats>div:nth-child(2){border:0}}
+.investor-intro{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:20px 32px;margin:0 0 30px;padding:25px 29px;border:1px solid #dfe6d4;border-radius:14px;background:linear-gradient(115deg,#eef3e7,#fff)}
+.investor-intro h1{font-size:25px;margin:8px 0}
+.investor-intro p{max-width:620px;font-size:12px;color:var(--muted);margin:0}
+.investor-route{display:grid;grid-template-columns:auto 20px auto;align-items:center;gap:8px;color:var(--green)}
+.route-currency{font:700 16px Manrope,Arial,sans-serif;padding:10px 13px;border-radius:8px;background:#fff;border:1px solid var(--line)}
+.cop-currency{background:#e8efcf}
+.investor-route small{grid-column:1/4;color:var(--muted);font-size:9px}
+.investor-disclaimer{grid-column:1/-1;display:flex;align-items:flex-start;gap:9px;border-top:1px solid #dfe6d4;padding-top:14px;color:#67745f;font-size:10px;line-height:1.6}
+.investor-disclaimer svg{flex:none;margin-top:1px}
+.investment-highlights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:20px 0 15px;padding:13px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.investment-highlights>div{min-width:0;padding:0 9px;border-right:1px solid var(--line)}
+.investment-highlights>div:first-child{padding-left:0}
+.investment-highlights>div:last-child{border:0}
+.investment-highlights small,.investment-highlights em{display:block;font-size:9px;color:var(--muted);font-style:normal}
+.investment-highlights strong{display:block;margin:7px 0;font:600 16px Manrope,Arial,sans-serif;letter-spacing:-.4px}
+.investment-highlights em{font-size:8px;line-height:1.4}
+.estimate-note{min-height:0!important;margin:0 0 8px!important;font-size:9px!important;line-height:1.5}
+.investment-modal-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:22px 0;padding:18px;border-radius:10px;background:#f2f5eb}
+.investment-modal-summary>div span,.investment-modal-summary>div strong{display:block}
+.investment-modal-summary>div span{font-size:9px;color:var(--muted);margin-bottom:7px}
+.investment-modal-summary>div strong{font:600 16px Manrope,Arial,sans-serif}
+.investment-modal-summary>p{grid-column:1/-1;margin:0;color:var(--muted);font-size:10px}
+.payment-demo-note{margin:10px 0 0;text-align:center;color:var(--muted);font-size:9px}
+.grower-disclaimer{margin:0;padding:0 20px 16px;color:var(--muted);font-size:9px;line-height:1.5}
+.phase-form{margin:24px 0;padding:18px;border:1px solid var(--line);border-radius:10px;background:#fafbf7}
+.phase-form legend{padding:0 7px;font:600 14px Manrope,Arial,sans-serif}
+.phase-form>p{margin:0 0 15px;color:var(--muted);font-size:10px}
+.phase-form-item{margin:12px 0;padding:14px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.phase-form-item>strong{display:block;margin-bottom:10px;font-size:11px}
+.phase-form-item .form-grid{margin-bottom:8px}
+.phase-form-item textarea{min-height:65px}
+.project-phases{margin:22px 0;padding:20px;border:1px solid var(--line);border-radius:11px;background:#fbfcf8}
+.phase-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.phase-heading h3{margin:5px 0 0;font:600 16px Manrope,Arial,sans-serif}
+.phase-simulation{color:var(--muted);font-size:9px}
+.phase-instructions{margin:0 0 13px;color:var(--muted);font-size:10px;line-height:1.5}
+.phase-list{display:grid;gap:9px}
+.phase-item{display:grid;grid-template-columns:30px minmax(0,1fr);gap:12px;padding:13px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.phase-number{display:grid;width:27px;height:27px;place-items:center;border-radius:50%;background:#edf2e5;color:var(--green);font-weight:700;font-size:11px}
+.phase-content{min-width:0}
+.phase-title,.phase-footer{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.phase-title strong{font-size:11px}
+.phase-title span{font:600 11px Manrope,Arial,sans-serif;white-space:nowrap}
+.phase-content>p{margin:5px 0;color:var(--muted);font-size:10px}
+.phase-origin{display:block;margin:6px 0;color:#856c34;font-size:9px;line-height:1.4}
+.phase-footer{margin-top:8px}
+.phase-status{color:var(--muted);font-size:9px}
+.phase-released{color:#456a34}
+.phase-funded{color:#8a6825}
+.phase-proposed{color:#6b7280}
+.phase-release{padding:8px 10px;font-size:9px}
+.phase-ready-banner{display:grid;gap:4px;margin:0 0 13px;padding:13px 15px;border:1px solid #cbd9b7;border-radius:8px;background:#eef4e5;color:#365b31}
+.phase-ready-banner strong{font-size:12px}
+.phase-ready-banner span{font-size:10px}
+.ready-for-sale{display:grid;gap:15px;margin:0 0 28px;padding:22px 24px;border:1px solid #cbd9b7;border-radius:12px;background:#f2f6e9}
+.ready-for-sale h2{margin:6px 0;font:600 18px Manrope,Arial,sans-serif}
+.ready-for-sale p{margin:0;color:var(--muted);font-size:11px}
+.ready-for-sale-list{display:grid;gap:8px}
+.ready-for-sale-list button{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);text-align:left}
+.ready-for-sale-list button>span:first-child{display:grid;gap:4px}
+.ready-for-sale-list strong{font-size:11px}
+.ready-for-sale-list small{color:var(--muted);font-size:9px}
+.ready-for-sale-badge{padding:6px 9px;border-radius:18px;background:#e7efdc;color:#456a34;font-size:9px;white-space:nowrap}
+.phase-progress-form{display:grid;gap:9px;margin-top:13px;padding:13px;border:1px solid #dfe6d4;border-radius:8px;background:#f8faf4}
+.phase-progress-form label{display:grid;gap:6px;color:var(--ink);font-size:10px}
+.phase-progress-form textarea{min-height:78px}
+.phase-progress-form input[type=file]{max-width:100%;font-size:10px}
+.phase-progress-form>small{color:var(--muted);font-size:9px}
+.phase-progress-form .button{justify-self:start;padding:9px 12px;font-size:10px}
+.phase-progress-list{display:grid;gap:8px;margin-top:13px}
+.phase-progress-list>strong{font-size:10px}
+.phase-progress-entry{padding:10px 12px;border-left:2px solid #9dac78;background:#f8faf4}
+.phase-progress-entry time{color:var(--muted);font-size:9px}
+.phase-progress-entry p{margin:5px 0;color:var(--ink);font-size:10px;line-height:1.5;white-space:pre-wrap}
+.phase-progress-entry a{color:var(--green);font-size:10px;font-weight:600}
+.grower-stats strong{font-size:clamp(15px,1.7vw,22px);letter-spacing:-.5px}
+@media(max-width:900px){.investment-highlights{grid-template-columns:1fr;gap:10px}.investment-highlights>div,.investment-highlights>div:first-child{padding:0;border:0}.investment-highlights>div strong{margin:3px 0}}
+@media(max-width:760px){.investor-intro{grid-template-columns:1fr;padding:22px}.investor-route{justify-self:start}.investment-modal-summary{grid-template-columns:1fr}.investment-modal-summary>p{grid-column:auto}}
+@media(max-width:560px){.phase-heading,.phase-footer{align-items:flex-start;flex-direction:column}.phase-title{align-items:flex-start;flex-direction:column;gap:4px}.phase-release{width:100%}}
+@media(max-width:560px){.ready-for-sale-list button{align-items:flex-start;flex-direction:column}}
+.modal .update-form,.modal .update-form+.button{display:none}
+.b2b-intro{margin:0 0 30px;padding:25px 29px;border:1px solid #dfe6d4;border-radius:14px;background:linear-gradient(115deg,#edf2e5,#fff)}
+.b2b-intro h1{font-size:25px;margin:8px 0}
+.b2b-intro>div:first-child>p{max-width:660px;margin:0;color:var(--muted);font-size:12px}
+.b2b-split-note{display:flex;gap:10px;align-items:flex-start;margin-top:18px;padding-top:14px;border-top:1px solid #dfe6d4;color:#66735e;font-size:10px;line-height:1.6}
+.b2b-split-note svg{flex:none}
+.b2b-highlights{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0 12px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.b2b-highlights small,.b2b-highlights em{display:block;color:var(--muted);font-size:9px;font-style:normal}
+.b2b-highlights strong{display:block;margin:7px 0;font:600 16px Manrope,Arial,sans-serif}
+.b2b-highlights em{font-size:8px}
+.traceability{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin:10px 0 16px;padding:12px;border-radius:8px;background:#f6f7f2}
+.traceability>div span,.traceability>div strong{display:block}
+.traceability>div span{font-size:8px;color:var(--muted);margin-bottom:4px}
+.traceability>div strong{font-size:10px}
+.deforestation-badge{grid-column:1/-1;font-size:8px;color:#526a3f}
+.b2b-modal{margin:18px 0;padding:18px;border:1px solid var(--line);border-radius:10px;background:#fcfdf9}
+.b2b-spec-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
+.b2b-spec-grid span,.b2b-spec-grid strong{display:block}
+.b2b-spec-grid span{font-size:9px;color:var(--muted);margin-bottom:5px}
+.b2b-spec-grid strong{font-size:11px}
+.b2b-invoice{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:18px;padding:14px 0;border-block:1px solid var(--line)}
+.b2b-invoice strong{font:600 16px Manrope,Arial,sans-serif}
+.b2b-invoice span{font-size:10px;color:var(--muted)}
+.b2b-split{display:grid;gap:8px;margin-top:15px}
+.b2b-split>strong{font:600 12px Manrope,Arial,sans-serif;margin-bottom:3px}
+.b2b-split>div{display:flex;justify-content:space-between;gap:12px;font-size:10px}
+.b2b-split small{font-size:9px;color:var(--muted);line-height:1.5;margin-top:5px}
+.content:has(.b2b-intro)>.page-heading{display:none}
+@media(max-width:760px){.b2b-intro{padding:22px}.b2b-spec-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.b2b-invoice{align-items:flex-start;flex-direction:column}}
